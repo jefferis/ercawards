@@ -1,0 +1,92 @@
+---
+title: "LS5-AdG"
+author: "Gregory Jefferis"
+date: "11/05/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+## Intro
+
+These are just some quick data scraping efforts to get metadata for the LS5 panel.
+
+```{r}
+adg_ls5_url <- "https://erc.europa.eu/projects-figures/erc-funded-projects/results?items_per_page=1000&f%5B0%5D=tid%253Aparents_all%3A76&f%5B1%5D=funding_scheme%3AAdvanced%20Grant%20%28AdG%29"
+```
+
+
+```{r}
+library(rvest)
+h=read_html(adg_ls5_url)
+grants <- html_nodes(h, "#block-system-main span")
+```
+
+```{r}
+nodes2 <-html_nodes(h, ".views-label-call-details , .views-label-hostInstitution-name, .views-label-xml-researcher, .views-label-title, .field-content, .views-label-acronym, .more a")
+```
+
+```{r}
+fieldcontent <-html_nodes(h, ".field-content")
+f1=html_text(fieldcontent)
+```
+
+
+```{r}
+erc_raw_query <- function(funding_scheme="Advanced Grant (AdG)", 
+                      panel="LS5", country="United Kingdom",
+                      items_per_page=1000) {
+  if(panel!="LS5")
+    stop("Only LS5 panel implemented so far!")
+  
+  baseurl <- "https://erc.europa.eu/projects-figures/erc-funded-projects/"
+  query=sprintf("results?items_per_page=%d&f[0]=funding_scheme:%s&f[1]=country:%s",
+                items_per_page,
+                funding_scheme,
+                country)
+  query=paste0(utils::URLencode(query),"&f[2]=tid%3Aparents_all:76")
+  u=paste0(baseurl, query)
+  h=xml2::read_html(u)
+  fieldcontent <-rvest::html_nodes(h, ".field-content")
+  tt=rvest::html_text(fieldcontent)
+  m=matrix(tt, ncol=7, byrow=T)
+  m
+}
+
+```
+
+```{r}
+erc_query <- function(... ){
+  m=erc_raw_query(...)
+  colnames(m)=c("acronym", "title", "name", "host", "calldetails",'details', "details2")
+  df=tibble::as_tibble(m[,1:4, drop=F], )
+  df2=read.csv(text = xx[,5], header = F, stringsAsFactors = F, 
+               col.names = c("grant", "panel", "call")) 
+  # remove leading whitespace
+  df2=as.data.frame(lapply(df2, trimws))
+  df=cbind(df, df2)
+  df$call=sub("_.*","",df$call)
+  tibble::as_tibble(df)
+}
+```
+
+```{r}
+library(dplyr)
+ukadg <- erc_query()
+ukadg %>%
+    filter(panel=="LS5") %>%
+  select(acronym, name, call, host) %>%
+  write.csv('ls5-uk.csv')
+```
+
+```{r}
+write.csv()
+```
+
+
