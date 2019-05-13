@@ -1,0 +1,88 @@
+---
+title: "LS5-Age"
+author: "Gregory Jefferis"
+date: "13/05/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Intro
+
+We have manually identified key personal data for ERC grant recipients at
+
+https://docs.google.com/spreadsheets/d/1gO661Pekx7EiaOA0AfOfGTkTpqGS_81ZP8eaMR5sWPw/edit?usp=sharing
+
+```{r, message=FALSE}
+library(googlesheets)
+library(ggplot2)
+library(dplyr)
+```
+
+The first time you run this, you may need to authorise access. I recommend doing this in an interactive session like so (which will open a web browser).
+```{r, eval=FALSE}
+googlesheets::gs_auth()
+```
+
+
+Read in the LS5 data from the google sheet.
+```{r, message=FALSE}
+gs=gs_url('https://docs.google.com/spreadsheets/d/1gO661Pekx7EiaOA0AfOfGTkTpqGS_81ZP8eaMR5sWPw/edit?usp=sharing')
+LS5=gs_read(gs, ws='LS5')
+```
+
+```{r}
+hist(LS5$`Applicant Age`)
+```
+
+Or showing each year:
+
+```{r}
+plot(table(LS5$`Applicant Age`))
+```
+
+
+
+
+```{r}
+LS5 %>% 
+  filter(is.finite(`Applicant Age`)) %>%
+  qplot(`Year award`, `Applicant Age`, col=Sex, data = .) +
+  ggbeeswarm::geom_quasirandom() +
+  scale_x_continuous(breaks=function(lims) {lims=round(lims);seq.int(from=lims[1], to=lims[2], by=1)})
+```
+
+Did the consolidator eligibility rules change at some point?
+
+## Proportion under 55
+
+The percentage for the whole group is:
+`r LS5[['Applicant Age']]<=55 / sum(is.finite(LS5[['Applicant Age']])) *100`.
+
+What is the percentage of under 55s over time?
+
+```{r}
+LS5 %>%
+  group_by(`Year award`) %>%
+  filter(is.finite(`Applicant Age`)) %>%
+  summarise(under55=round(100*sum(`Applicant Age`<=55)/n()),
+            n=n())
+```
+
+```{r}
+LS5 %>%
+  filter(is.finite(`Applicant Age`)) %>%
+  summarise(under55=sum(`Applicant Age`<=55)/n())
+```
+
+## Gender
+
+Frankly the most notable thing at first glance is the very low proportion of 
+female recipients:
+
+```{r}
+
+```
+
